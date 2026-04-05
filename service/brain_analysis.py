@@ -1,4 +1,4 @@
-import asyncio
+from pydoc import doc
 import shutil
 import tempfile
 from pathlib import Path
@@ -9,13 +9,13 @@ from dotenv import load_dotenv
 from service.text_processing import clean_text
 import os
 import logging
+import spacy
 
 load_dotenv()
 
 # MongoDB connection
 mongo_uri = os.getenv("MONGODB_URI", "mongodb://localhost:27017/")
 _model = None
-VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
 
 # Get the model instance (singleton pattern)
 def _get_model():
@@ -54,14 +54,27 @@ async def insert_data_to_db(preds, segments, source_name, user_id):
     print(result.inserted_ids)
     return result.inserted_ids
 
+def extract_proper_noun(text, user_id):
+    client = get_mongo_write_client()
+    db = client["neuro"]
+    collection = db["user_data"]
+    nlp = spacy.load("en_core_web_sm")
+    doc = nlp(text)
+    proper_nouns = [token.text for token in doc if token.pos_ == "PROPN"]
+    collection.update_one(
+        {"_id": user_id}, 
+        {"$addToSet": {"proper_nouns": {"$each": proper_nouns}}},
+        upsert=True
+    )
+    
 def predict_from_html(raw_html):
     model = _get_model()
     text = clean_text(raw_html)
+
     tmpdir = tempfile.mkdtemp()
     try:
         tmp = Path(tmpdir) / "input.txt"
         tmp.write_text(text)
-        # Use tmpdir as cache_folder so TRIBE writes TTS files here, isolated per request
         model.cache_folder = tmpdir
         df = model.get_events_dataframe(text_path=str(tmp))
         preds, segments = model.predict(events=df)

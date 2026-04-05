@@ -1,3 +1,4 @@
+import os
 import re
 import unicodedata
 
@@ -8,6 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+GEMINI_API_KEY = os.getenv("GOOGLE_API_KEY")
 REMOVE_TAGS = {"script", "style", "noscript", "svg", "head", "iframe"}
 BOILERPLATE_TAGS = {"nav", "footer", "header", "aside"}
 BOILERPLATE_PATTERNS = re.compile(
@@ -21,7 +23,7 @@ BLOCK_TAGS = {
 }
 
 def get_gemini_client():
-    client = genai.Client()
+    client = genai.Client(api_key=GEMINI_API_KEY)
     return client
 
 def strip_html_tags(text):
