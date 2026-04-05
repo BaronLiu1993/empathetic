@@ -16,7 +16,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Install tribev2 as editable package
 COPY tribev2/ tribev2/
-RUN pip install --no-cache-dir -e ./tribev2
+RUN pip install  -e ./tribev2
 
 # Copy application code
 COPY main.py .
