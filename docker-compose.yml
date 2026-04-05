@@ -5,10 +5,30 @@ services:
       - "8000:8000"
     depends_on:
       - mongo
+      - rabbitmq
     environment:
       - MONGODB_URI=mongodb://mongo:27017/
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
     volumes:
       - model-cache:/app/cache
+
+  worker:
+    build: .
+    command: celery -A analysis_queue.analysis_worker worker --loglevel=info
+    depends_on:
+      - mongo
+      - rabbitmq
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+    volumes:
+      - model-cache:/app/cache
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
 
   mongo:
     image: mongo:7

@@ -1,9 +1,12 @@
 import asyncio
+import tempfile
 from pathlib import Path
 
 from tribev2 import TribeModel
 from pymongo import AsyncMongoClient
 from dotenv import load_dotenv
+from service.file_upload import write_file_to_s3, upload_text_pipeline_files
+from service.text_processing import clean_text
 import os
 import logging
 
@@ -51,14 +54,15 @@ async def insert_data_to_db(preds, segments, source_name, user_id):
     print(result.inserted_ids)
     return result.inserted_ids
 
-def predict_from_text(text):
+def predict_from_html(raw_html):
     model = _get_model()
-    tmp = Path("./cache/input.txt")
-    tmp.parent.mkdir(parents=True, exist_ok=True)
+    text = clean_text(raw_html)
+    tmpdir = tempfile.mkdtemp()
+    tmp = Path(tmpdir) / "input.txt"
     tmp.write_text(text)
     df = model.get_events_dataframe(text_path=str(tmp))
     preds, segments = model.predict(events=df)
-    return preds, segments
+    return preds, segments, tmpdir
 
 def predict_from_video(video_path):
     model = _get_model()
@@ -68,11 +72,14 @@ def predict_from_video(video_path):
 
 async def save_brain_analysis_results(source_name, user_id):
     ext = Path(source_name).suffix.lower()
+    tmpdir = None
     if ext in VIDEO_EXTENSIONS:
         preds, segments = predict_from_video(source_name)
+        write_file_to_s3(user_id, source_name)
     else:
-        preds, segments = predict_from_text(source_name)
-    logging.info("[Brain Analysis] Predictions generated successfully.")
+        preds, segments, tmpdir = predict_from_html(source_name)
+        upload_text_pipeline_files(user_id, source_name, tmpdir)
+    logging.info("[Brain Analysis] Files uploaded to S3.")
     await insert_data_to_db(preds, segments, source_name, user_id)
     logging.info("[Brain Analysis] Results saved to database.")
     return preds, segments

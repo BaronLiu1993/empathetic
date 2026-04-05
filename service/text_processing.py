@@ -94,19 +94,21 @@ def _llm_text_processing(text):
     client = get_gemini_client()
     response = client.models.generate_content(
         model="gemini-3-flash-preview",
-        contents=f"""You are a text extraction assistant. Given the following raw text scraped from a webpage, extract only the main article content.
-Remove all of the following:
-- Advertisements and promotional content
-- Navigation menus and footers
-- Cookie notices and popups
-- Sidebar content and related links
-- Any other boilerplate text
+        contents=f"""
+                You are a text extraction assistant. Given the following raw text scraped from a webpage, extract only the main article content.
+                Remove all of the following:
+                - Advertisements and promotional content
+                - Navigation menus and footers
+                - Cookie notices and popups
+                - Sidebar content and related links
+                - Any other boilerplate text
 
-Return the cleaned main content as the original paragraph. Preserve the original structure with headings and paragraphs. Do not add any commentary or explanation — output only the extracted content.
+                Return the cleaned main content as the original paragraph. Preserve the original structure with headings and paragraphs. Do not add any commentary or explanation — output only the extracted content.
 
-<input>
-{text}
-</input>"""
+                ```
+                {text}
+                ```
+        """
     )
     return response.text
 
