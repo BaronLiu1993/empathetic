@@ -1,4 +1,13 @@
+import pytest
+from unittest.mock import patch
 from service.text_processing import clean_text, strip_html_tags
+
+
+@pytest.fixture(autouse=True)
+def mock_llm():
+    """Mock the Gemini LLM call so no API calls are made."""
+    with patch("service.text_processing._llm_text_processing", side_effect=lambda text: text):
+        yield
 
 
 class TestStripHtmlTags:
@@ -7,7 +16,6 @@ class TestStripHtmlTags:
 
     def test_nested(self):
         assert strip_html_tags("<div><p>hello</p></div>") == "hello"
-
 
 class TestCleanText:
     def test_empty_input(self):
